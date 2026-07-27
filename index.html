@@ -289,10 +289,12 @@
     const $ = s => document.querySelector(s);
     const state = { schools:[], filtered:[], selected:null, reference:"", source:"" };
     const TRACKING_KEY="educacenso_21gre_acompanhamento_v1";
+    const ROOT_REPORT_NAME="Relatorio_Acomp_Coleta_1Etapa_27072026.xlsx";
     const ROOT_REPORTS=[
-      "Relatorio_Acomp_Coleta_1Etapa_27072026.xlsx",
-      "Relatorio_Acomp_Coleta_1Etapa_27072026.xls",
-      "Relatorio_Acomp_Coleta_1Etapa_27072026"
+      "./"+ROOT_REPORT_NAME,
+      new URL(ROOT_REPORT_NAME,document.baseURI).href,
+      "https://raw.githubusercontent.com/lucassena1/censo2026/main/"+ROOT_REPORT_NAME,
+      "https://cdn.jsdelivr.net/gh/lucassena1/censo2026@main/"+ROOT_REPORT_NAME
     ];
     const norm = v => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
     const num = v => Number(String(v ?? 0).replace(",", ".")) || 0;
@@ -563,16 +565,22 @@
     $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))$("#modal").classList.remove("open");});
     $("#generalPdf").addEventListener("click",generalPdf);$("#allPdf").addEventListener("click",allPdfs);
     async function autoLoadRootReport(){
-      if(location.protocol==="file:")return;
-      for(const fileName of ROOT_REPORTS){
+      $("#fileName").textContent="Carregando relatório automático...";
+      $("#fileMeta").textContent=ROOT_REPORT_NAME;
+      for(const reportUrl of [...new Set(ROOT_REPORTS)]){
         try{
-          const response=await fetch(fileName,{cache:"no-store"});
+          const separator=reportUrl.includes("?")?"&":"?";
+          const response=await fetch(reportUrl+separator+"_="+Date.now(),{cache:"no-store"});
           if(!response.ok)continue;
-          parseWorkbook(await response.arrayBuffer(),fileName);
+          const buffer=await response.arrayBuffer();
+          if(buffer.byteLength<1000)continue;
+          parseWorkbook(buffer,ROOT_REPORT_NAME);
           toast("Relatório da raiz carregado automaticamente.");
           return;
         }catch(e){}
       }
+      $("#fileName").textContent="Importe o Relatório de Acompanhamento da Coleta";
+      $("#fileMeta").textContent="O carregamento automático falhou. Use “Selecionar planilha”.";
     }
     autoLoadRootReport();
   </script>
