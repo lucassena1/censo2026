@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Educacenso 2026 | 21ª GRE</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <style>
+    :root {
+      --blue-950:#071a36; --blue-900:#0a2856; --blue-800:#103b78;
+      --blue-700:#1555a3; --blue-100:#e8f1ff; --ink:#182335;
+      --muted:#68758a; --line:#dfe6ef; --bg:#f3f6fa; --white:#fff;
+      --green:#15805d; --green-bg:#e4f7ef; --red:#c43b48; --red-bg:#ffeaec;
+      --amber:#a96800; --amber-bg:#fff4d9; --gray-bg:#eef1f5;
+      --shadow:0 12px 34px rgba(14,42,82,.09);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Segoe UI,Arial,sans-serif}
+    button,input,select{font:inherit}
+    .topbar{background:linear-gradient(120deg,var(--blue-950),var(--blue-800));color:#fff;padding:24px 5vw 54px;position:relative;overflow:hidden}
+    .topbar:after{content:"";position:absolute;width:460px;height:460px;border:1px solid rgba(255,255,255,.12);border-radius:50%;right:-150px;top:-280px;box-shadow:0 0 0 70px rgba(255,255,255,.025)}
+    .brand{max-width:1450px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:24px;position:relative;z-index:1}
+    .brand-left{display:flex;align-items:center;gap:15px}
+    .mark{width:54px;height:54px;border:1px solid rgba(255,255,255,.38);border-radius:16px;display:grid;place-items:center;font-weight:900;font-size:18px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px)}
+    .brand h1{font-size:21px;margin:0 0 4px;letter-spacing:-.3px}
+    .brand p{margin:0;color:#cbdcff;font-size:13px}
+    .date-chip{padding:9px 13px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);font-size:12px}
+    .wrap{width:min(1450px,92vw);margin:-31px auto 50px;position:relative;z-index:2}
+    .upload-card{background:#fff;border:1px solid rgba(216,226,239,.8);border-radius:20px;padding:18px 20px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .upload-info{display:flex;align-items:center;gap:14px;min-width:0}
+    .upload-icon{width:43px;height:43px;border-radius:13px;background:var(--blue-100);color:var(--blue-700);display:grid;place-items:center;font-size:21px;flex:none}
+    .upload-info strong{display:block;font-size:14px;margin-bottom:3px}
+    .upload-info small{color:var(--muted)}
+    .actions{display:flex;gap:9px;flex-wrap:wrap}
+    .btn{border:0;border-radius:11px;padding:11px 15px;cursor:pointer;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:.18s}
+    .btn:hover{transform:translateY(-1px)}
+    .btn-primary{background:var(--blue-700);color:#fff;box-shadow:0 6px 16px rgba(21,85,163,.2)}
+    .btn-dark{background:var(--blue-950);color:#fff}
+    .btn-soft{background:var(--blue-100);color:var(--blue-800)}
+    .btn-white{background:#fff;color:var(--ink);border:1px solid var(--line)}
+    .btn:disabled{opacity:.42;cursor:not-allowed;transform:none}
+    #fileInput{display:none}
+    .summary{margin-top:18px;display:grid;grid-template-columns:repeat(5,1fr);gap:13px}
+    .kpi{background:#fff;border:1px solid var(--line);border-radius:17px;padding:18px;min-height:112px;position:relative;overflow:hidden}
+    .kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,var(--blue-700))}
+    .kpi-label{color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.55px}
+    .kpi-value{font-size:31px;font-weight:850;letter-spacing:-1.1px;margin:9px 0 5px;color:var(--blue-950)}
+    .kpi-note{font-size:11px;color:var(--muted)}
+    .progress-card{margin-top:13px;background:#fff;border:1px solid var(--line);border-radius:17px;padding:17px 20px;display:grid;grid-template-columns:190px 1fr 110px;align-items:center;gap:18px}
+    .progress-title strong{display:block;font-size:13px}.progress-title small{color:var(--muted);font-size:11px}
+    .bar{height:11px;border-radius:99px;background:#e8edf4;overflow:hidden}.bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue-700),#30a5dd);border-radius:inherit;transition:.5s}
+    .progress-num{text-align:right;font-weight:850;color:var(--blue-800)}
+    .section{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 7px 23px rgba(14,42,82,.045)}
+    .section-head{padding:18px 20px 13px;border-bottom:1px solid #edf1f5;display:flex;justify-content:space-between;align-items:center;gap:15px}
+    .section-head h2{font-size:15px;margin:0}.section-head p{font-size:11px;color:var(--muted);margin:4px 0 0}
+    .filters{padding:14px 20px;display:grid;grid-template-columns:2fr repeat(3,1fr);gap:10px;border-bottom:1px solid #edf1f5}
+    .field{height:41px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:0 12px;color:var(--ink);outline:none;min-width:0}
+    .field:focus{border-color:#84aee4;box-shadow:0 0 0 3px #eaf2fd}
+    .table-wrap{overflow:auto;max-height:620px}
+    table{border-collapse:collapse;width:100%;min-width:1080px}
+    th{position:sticky;top:0;z-index:1;background:#f7f9fc;color:#5b6980;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.45px;padding:11px 13px;border-bottom:1px solid var(--line)}
+    td{padding:12px 13px;border-bottom:1px solid #edf1f5;font-size:12px;vertical-align:middle}
+    tr:hover td{background:#f9fbfe}
+    .school-name{font-weight:750;color:var(--blue-950);max-width:340px}.school-code{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+    .badge{display:inline-flex;align-items:center;border-radius:99px;padding:5px 9px;font-size:10px;font-weight:800;white-space:nowrap}
+    .b-red{background:var(--red-bg);color:var(--red)}.b-green{background:var(--green-bg);color:var(--green)}
+    .b-amber{background:var(--amber-bg);color:var(--amber)}.b-gray{background:var(--gray-bg);color:#687384}.b-blue{background:var(--blue-100);color:var(--blue-700)}
+    .icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--blue-700);cursor:pointer;font-weight:800}
+    .empty{padding:70px 20px;text-align:center;color:var(--muted)}
+    .empty .big{font-size:36px;margin-bottom:12px}.empty strong{display:block;color:var(--ink);margin-bottom:6px}
+    .footer{color:#7b8799;text-align:center;font-size:11px;padding:22px}
+    .modal{position:fixed;inset:0;background:rgba(4,16,36,.64);display:none;align-items:center;justify-content:center;padding:20px;z-index:20;backdrop-filter:blur(4px)}
+    .modal.open{display:flex}.modal-card{width:min(790px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:21px;box-shadow:0 30px 90px rgba(0,0,0,.25)}
+    .modal-head{background:linear-gradient(120deg,var(--blue-950),var(--blue-800));color:#fff;padding:23px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+    .modal-head h3{margin:0 0 6px;font-size:18px}.modal-head p{margin:0;color:#c9d9f5;font-size:11px}.close{border:0;background:rgba(255,255,255,.12);color:#fff;width:32px;height:32px;border-radius:9px;cursor:pointer}
+    .modal-body{padding:22px}.status-banner{border-radius:12px;padding:13px 15px;margin-bottom:18px;font-size:12px;font-weight:700}
+    .detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.detail{border:1px solid var(--line);border-radius:11px;padding:12px}
+    .detail label{display:block;text-transform:uppercase;color:var(--muted);font-size:9px;letter-spacing:.5px;font-weight:800;margin-bottom:5px}.detail span{font-size:12px;font-weight:650;overflow-wrap:anywhere}
+    .modal-title{font-size:12px;margin:20px 0 10px;color:var(--blue-900)}
+    .enrollment{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.enroll{background:#f6f8fb;border-radius:11px;padding:12px;text-align:center}
+    .enroll strong{display:block;font-size:20px;color:var(--blue-900)}.enroll small{font-size:9px;color:var(--muted)}
+    .modal-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:20px}
+    .toast{position:fixed;right:22px;bottom:22px;background:var(--blue-950);color:#fff;border-radius:11px;padding:13px 17px;font-size:12px;box-shadow:var(--shadow);z-index:50;transform:translateY(90px);opacity:0;transition:.25s}
+    .toast.show{transform:none;opacity:1}
+    @media(max-width:1000px){.summary{grid-template-columns:repeat(2,1fr)}.summary .kpi:first-child{grid-column:span 2}.filters{grid-template-columns:1fr 1fr}.progress-card{grid-template-columns:1fr}.progress-num{text-align:left}}
+    @media(max-width:620px){.topbar{padding:18px 4vw 50px}.date-chip{display:none}.wrap{width:94vw}.upload-card{align-items:flex-start;flex-direction:column}.actions{width:100%}.actions .btn{flex:1}.summary{gap:8px}.kpi{padding:15px}.kpi-value{font-size:27px}.filters{grid-template-columns:1fr}.detail-grid,.enrollment{grid-template-columns:1fr 1fr}.section-head{align-items:flex-start;flex-direction:column}}
+
+    /* Identidade institucional — desenho sóbrio, editorial e administrativo */
+    :root{
+      --blue-950:#08264a;--blue-900:#12375b;--blue-800:#17476f;--blue-700:#1d5c8f;
+      --blue-100:#e9f0f6;--ink:#18222c;--muted:#66727d;--line:#ccd4da;
+      --bg:#e9edef;--white:#fff;--green:#28664e;--green-bg:#e1eee8;
+      --red:#9b3038;--red-bg:#f4e2e3;--amber:#875e13;--amber-bg:#f3ead5;
+      --gray-bg:#e8ebed;--shadow:0 4px 14px rgba(15,38,60,.08);
+    }
+    body{background:var(--bg);font-family:"Segoe UI",Arial,sans-serif}
+    .topbar{
+      background:#fff;color:var(--ink);padding:0 5vw 45px;border-top:6px solid var(--blue-950);
+      overflow:visible;
+    }
+    .topbar:before{
+      content:"";position:absolute;left:0;right:0;bottom:0;height:9px;
+      background:linear-gradient(90deg,#f1c232 0 14%,var(--blue-950) 14% 100%);
+    }
+    .topbar:after{display:none}
+    .brand{padding-top:23px;align-items:center}
+    .brand-left{gap:18px}
+    .mark{
+      width:66px;height:66px;border:0;border-radius:0;background:var(--blue-950);color:#fff;
+      box-shadow:inset 0 -6px 0 #f1c232;font-size:20px;line-height:18px;display:flex;
+      flex-direction:column;letter-spacing:-.5px;
+    }
+    .mark small{font-size:8px;letter-spacing:1.6px;font-weight:700}
+    .eyebrow{
+      display:block;color:#8a6c13;font-size:9px;font-weight:800;letter-spacing:1.55px;
+      text-transform:uppercase;margin-bottom:5px;
+    }
+    .brand h1{
+      color:var(--blue-950);font-family:Georgia,"Times New Roman",serif;font-size:25px;
+      font-weight:700;letter-spacing:-.35px;margin-bottom:3px;
+    }
+    .brand p{color:#68747f;font-size:12px}
+    .date-chip{
+      border:1px solid var(--blue-950);border-radius:0;background:#fff;color:var(--blue-950);
+      font-weight:700;text-transform:uppercase;letter-spacing:.45px;padding:9px 12px;
+    }
+    .wrap{margin-top:-22px;width:min(1480px,94vw)}
+    .upload-card{
+      border:1px solid #bdc7ce;border-top:4px solid #f1c232;border-radius:2px;padding:16px 18px;
+      box-shadow:0 3px 9px rgba(15,38,60,.09);
+    }
+    .upload-icon{
+      width:39px;height:39px;border-radius:0;background:var(--blue-950);color:#fff;font-size:18px;
+    }
+    .upload-info strong{color:var(--blue-950);font-family:Georgia,"Times New Roman",serif;font-size:15px}
+    .btn{
+      border-radius:2px;padding:10px 14px;text-transform:uppercase;letter-spacing:.38px;
+      font-size:10px;box-shadow:none;
+    }
+    .btn:hover{transform:none;filter:brightness(.94)}
+    .btn-primary{background:var(--blue-800);box-shadow:none}
+    .btn-dark{background:var(--blue-950)}
+    .btn-soft{background:#edf2f5;border:1px solid #bdc9d1}
+    .btn-white{border-color:#aebbc4}
+    .summary{
+      margin-top:14px;display:grid;grid-template-columns:repeat(5,1fr);gap:1px;
+      background:#c8d0d6;border:1px solid #c8d0d6;
+    }
+    .kpi{
+      border:0;border-radius:0;min-height:103px;padding:16px 18px;background:#fff;
+    }
+    .kpi:before{left:0;right:0;top:0;bottom:auto;width:auto;height:3px}
+    .kpi-label{font-size:9px;letter-spacing:.9px;color:#5f6c77}
+    .kpi-value{font-family:Georgia,"Times New Roman",serif;font-size:32px;font-weight:700;margin:8px 0 3px}
+    .kpi-note{font-size:10px}
+    .progress-card{
+      margin-top:10px;border:1px solid #c3ccd3;border-radius:0;padding:13px 17px;
+      box-shadow:none;border-left:5px solid var(--blue-950);
+    }
+    .bar{height:7px;border-radius:0;background:#dce2e6}.bar span{border-radius:0;background:var(--blue-700)}
+    .progress-num{font-family:Georgia,"Times New Roman",serif}
+    .section{
+      margin-top:14px;border:1px solid #bdc7ce;border-radius:0;box-shadow:0 3px 10px rgba(15,38,60,.06);
+    }
+    .section-head{padding:16px 18px 12px;border-bottom:1px solid #cbd3d9}
+    .section-head h2{
+      color:var(--blue-950);font-family:Georgia,"Times New Roman",serif;font-size:18px;
+      position:relative;padding-left:12px;
+    }
+    .section-head h2:before{content:"";position:absolute;left:0;top:1px;bottom:1px;width:3px;background:#f1c232}
+    .filters{padding:12px 18px;background:#f3f5f6;border-bottom:1px solid #cbd3d9;gap:8px}
+    .field{height:38px;border-color:#b9c4cc;border-radius:1px;background:#fff;font-size:11px}
+    .field:focus{border-color:var(--blue-700);box-shadow:inset 3px 0 0 var(--blue-700)}
+    .table-wrap{max-height:640px}
+    th{
+      background:var(--blue-950);color:#fff;padding:10px 12px;border-bottom:0;font-size:9px;
+      letter-spacing:.65px;
+    }
+    td{padding:10px 12px;border-bottom:1px solid #d9dfe3;font-size:11px}
+    tbody tr:nth-child(even) td{background:#f7f8f9}
+    tr:hover td{background:#edf3f7!important}
+    .school-name{font-size:11px}.school-code{font-size:9px}
+    .badge{border-radius:2px;padding:4px 7px;font-size:9px;border-left:3px solid currentColor}
+    .icon-btn{width:31px;height:29px;border-radius:1px;border-color:#9eacb7;background:#fff}
+    .empty{background:#f8f9fa}
+    .footer{padding:19px;border-top:1px solid #c6cfd5;margin-top:15px;text-transform:uppercase;letter-spacing:.55px;font-size:9px}
+    .modal{background:rgba(5,23,42,.72);backdrop-filter:none}
+    .modal-card{border-radius:2px;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+    .modal-head{background:var(--blue-950);border-bottom:6px solid #f1c232}
+    .modal-head h3{font-family:Georgia,"Times New Roman",serif}
+    .close{border-radius:0;background:transparent;border:1px solid rgba(255,255,255,.45)}
+    .status-banner,.detail,.enroll{border-radius:2px}
+    .detail{border-left:3px solid #9dafbc}
+    .enroll{border-bottom:3px solid #ccd5dc}
+    .toast{border-radius:2px;border-left:5px solid #f1c232}
+    @media(max-width:1000px){
+      .summary{grid-template-columns:repeat(2,1fr);gap:1px}.summary .kpi:first-child{grid-column:span 2}
+    }
+    @media(max-width:620px){
+      .topbar{padding:0 3vw 42px}.brand{padding-top:16px}.mark{width:54px;height:58px}
+      .brand h1{font-size:20px}.eyebrow{font-size:8px}.summary{gap:1px}.kpi{padding:14px}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-left">
+        <div class="mark">21ª<small>GRE</small></div>
+        <div><span class="eyebrow">Governo do Estado do Piauí · Secretaria de Educação</span><h1>Acompanhamento Educacenso 2026</h1><p>Monitoramento da primeira etapa da coleta · Rede estadual de ensino</p></div>
+      </div>
+      <div class="date-chip" id="referenceTop">Aguardando planilha</div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="upload-card">
+      <div class="upload-info">
+        <div class="upload-icon">⇧</div>
+        <div><strong id="fileName">Importe o Relatório de Acompanhamento da Coleta</strong><small id="fileMeta">Arquivo Excel (.xlsx ou .xls) emitido pelo Educacenso</small></div>
+      </div>
+      <div class="actions">
+        <label class="btn btn-primary" for="fileInput">Selecionar planilha</label>
+        <input id="fileInput" type="file" accept=".xlsx,.xls">
+        <button class="btn btn-white" id="generalPdf" disabled>Relatório geral</button>
+        <button class="btn btn-dark" id="allPdf" disabled>PDFs por escola (.zip)</button>
+      </div>
+    </section>
+
+    <section class="summary">
+      <article class="kpi" style="--accent:#1555a3"><div class="kpi-label">Total de unidades</div><div class="kpi-value" id="kTotal">—</div><div class="kpi-note" id="kTotalNote">na planilha importada</div></article>
+      <article class="kpi" style="--accent:#c43b48"><div class="kpi-label">Não iniciaram</div><div class="kpi-value" id="kNotStarted">—</div><div class="kpi-note">unidades em atividade</div></article>
+      <article class="kpi" style="--accent:#a96800"><div class="kpi-label">Em migração</div><div class="kpi-value" id="kMigration">—</div><div class="kpi-note">coleta em processamento</div></article>
+      <article class="kpi" style="--accent:#15805d"><div class="kpi-label">On-line</div><div class="kpi-value" id="kOnline">—</div><div class="kpi-note">coleta iniciada on-line</div></article>
+      <article class="kpi" style="--accent:#687384"><div class="kpi-label">Paralisadas</div><div class="kpi-value" id="kPaused">—</div><div class="kpi-note">monitoradas separadamente</div></article>
+    </section>
+
+    <section class="progress-card">
+      <div class="progress-title"><strong>Avanço entre escolas ativas</strong><small>Migração e on-line consideradas iniciadas</small></div>
+      <div class="bar"><span id="progressBar"></span></div>
+      <div class="progress-num" id="progressNum">—</div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div><h2>Unidades escolares</h2><p id="resultCount">Importe a planilha para iniciar a análise</p></div>
+        <button class="btn btn-soft" id="clearFilters" disabled>Limpar filtros</button>
+      </div>
+      <div class="filters">
+        <input class="field" id="search" placeholder="Buscar escola, código, telefone ou e-mail..." disabled>
+        <select class="field" id="collectionFilter" disabled><option value="">Todas as formas de coleta</option></select>
+        <select class="field" id="operationFilter" disabled><option value="">Todas as situações</option></select>
+        <select class="field" id="locationFilter" disabled><option value="">Todas as localizações</option></select>
+      </div>
+      <div class="table-wrap">
+        <div class="empty" id="emptyState"><div class="big">▤</div><strong>Nenhuma planilha carregada</strong>Selecione o relatório do Educacenso acima.</div>
+        <table id="dataTable" hidden>
+          <thead><tr><th>Escola</th><th>Situação</th><th>Forma de coleta</th><th>Gestor</th><th>Matrículas</th><th>Contato</th><th>Prioridade</th><th>Ações</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+    <div class="footer">21ª Gerência Regional de Educação · Relatório de apoio à gestão · Dados processados localmente no navegador</div>
+  </main>
+
+  <div class="modal" id="modal">
+    <div class="modal-card">
+      <div class="modal-head"><div><h3 id="modalName"></h3><p id="modalCode"></p></div><button class="close" id="closeModal">✕</button></div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const state = { schools:[], filtered:[], selected:null, reference:"", source:"" };
+    const norm = v => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+    const num = v => Number(String(v ?? 0).replace(",", ".")) || 0;
+    const clean = v => (v === undefined || v === null || String(v).trim()==="" ? "Não informado" : String(v).trim());
+    const slug = v => norm(v).replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,80);
+    const toast = msg => { const t=$("#toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2800); };
+    function get(row, map, names){
+      for(const name of names){ const idx=map[norm(name)]; if(idx!==undefined) return row[idx]; }
+      return "";
+    }
+    function findHeader(rows){
+      return rows.findIndex(r => r.some(v => ["nome da escola","codigo da escola","forma de coleta"].includes(norm(v))));
+    }
+    function badge(text,type){ return `<span class="badge b-${type}">${escapeHtml(text)}</span>`; }
+    function escapeHtml(v){ return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m])); }
+    function collectionType(v){
+      const n=norm(v);
+      if(n.includes("nao iniciou")) return "not";
+      if(n.includes("migracao")) return "migration";
+      if(n.includes("on line") || n==="online") return "online";
+      return "other";
+    }
+    function priority(s){
+      if(norm(s.operation).includes("paralisada")) return {label:"Cadastro paralisado",type:"gray",rank:4};
+      if(collectionType(s.collection)==="not" && norm(s.operation).includes("atividade")) return {label:"Ação imediata",type:"red",rank:1};
+      if(norm(s.manager)!=="sim") return {label:"Verificar gestor",type:"amber",rank:2};
+      if(norm(s.phone).includes("nao foi informado")) return {label:"Atualizar contato",type:"amber",rank:3};
+      return {label:"Acompanhamento",type:"green",rank:5};
+    }
+    function parseWorkbook(data,fileName){
+      const wb=XLSX.read(data,{type:"array",cellDates:false});
+      let best=null;
+      for(const sn of wb.SheetNames){
+        const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:"",raw:false});
+        const hi=findHeader(rows);
+        if(hi>=0 && (!best || rows.length>best.rows.length)) best={rows,hi,sn};
+      }
+      if(!best) throw new Error("Cabeçalho do relatório não identificado.");
+      const headers=best.rows[best.hi].map(v=>String(v??"").trim());
+      const map={}; headers.forEach((h,i)=>map[norm(h)]=i);
+      const schools=[];
+      for(const row of best.rows.slice(best.hi+1)){
+        const name=get(row,map,["Nome da escola"]);
+        const code=get(row,map,["Código da escola"]);
+        if(!name || !code || norm(name).includes("fonte:")) continue;
+        const matCols=headers.map((h,i)=>({h,i})).filter(x=>norm(x.h).startsWith("mat.") || norm(x.h).startsWith("total matriculas"));
+        const modalities=matCols.filter(x=>norm(x.h).startsWith("mat.")).map(x=>({name:x.h.replace(/^Mat\.\s*/i,""),value:num(row[x.i])})).filter(x=>x.value>0);
+        const allFields=headers.map((header,index)=>({
+          label:header,
+          value:row[index] === undefined || row[index] === null || String(row[index]).trim()==="" ? "Não informado" : String(row[index]).trim()
+        })).filter(item=>item.label);
+        const s={
+          reference:clean(get(row,map,["Data de Referência"])), code:clean(code), name:clean(name),
+          municipality:clean(get(row,map,["Município"])), regional:clean(get(row,map,["Órgão Regional"])),
+          phone:clean(get(row,map,["Telefone(s) da escola"])), email:clean(get(row,map,["E-mail da escola"])),
+          operation:clean(get(row,map,["Situação de Funcionamento"])), regulation:clean(get(row,map,["Regulamentação"])),
+          location:clean(get(row,map,["Localização"])), differentiated:clean(get(row,map,["Localização Diferenciada"])),
+          food:clean(get(row,map,["Oferece Alimentação Escolar"])), closing:clean(get(row,map,["Situação de Fechamento"])),
+          collection:clean(get(row,map,["Forma de Coleta"])), blocked:clean(get(row,map,["Escola Bloqueada"])),
+          manager:clean(get(row,map,["Gestor Escolar"])), toConfirm:num(get(row,map,["Matrículas a confirmar ou desconsiderar"])),
+          curricular:num(get(row,map,["Total matrículas - Curricular"])), aee:num(get(row,map,["Total matrículas - AEE"])),
+          complementary:num(get(row,map,["Total matrículas - Atividade Complementar"])),
+          curricularComplementary:num(get(row,map,["Total matrículas - Curricular com Atividade Complementar"])),
+          modalities, allFields
+        };
+        s.total=s.curricular+s.aee+s.complementary;
+        s.priority=priority(s);
+        schools.push(s);
+      }
+      if(!schools.length) throw new Error("Nenhuma escola foi localizada no arquivo.");
+      schools.sort((a,b)=>a.priority.rank-b.priority.rank || a.name.localeCompare(b.name,"pt-BR"));
+      state.schools=schools; state.reference=schools[0].reference; state.source=fileName; state.filtered=[...schools];
+      refresh();
+    }
+    function fillSelect(el,values,label){
+      el.innerHTML=`<option value="">${label}</option>`+[...new Set(values)].sort((a,b)=>a.localeCompare(b,"pt-BR")).map(v=>`<option>${escapeHtml(v)}</option>`).join("");
+    }
+    function refresh(){
+      const all=state.schools, active=all.filter(s=>norm(s.operation).includes("atividade"));
+      const notStarted=active.filter(s=>collectionType(s.collection)==="not");
+      const migration=all.filter(s=>collectionType(s.collection)==="migration");
+      const online=all.filter(s=>collectionType(s.collection)==="online");
+      const paused=all.filter(s=>norm(s.operation).includes("paralisada"));
+      const startedActive=active.filter(s=>collectionType(s.collection)!=="not").length;
+      const pct=active.length?Math.round(startedActive/active.length*100):0;
+      $("#kTotal").textContent=all.length; $("#kNotStarted").textContent=notStarted.length;
+      $("#kMigration").textContent=migration.length; $("#kOnline").textContent=online.length; $("#kPaused").textContent=paused.length;
+      $("#kTotalNote").textContent=`${active.length} em atividade`;
+      $("#progressBar").style.width=pct+"%"; $("#progressNum").textContent=pct+"% iniciado";
+      $("#referenceTop").textContent="Referência: "+state.reference;
+      $("#fileName").textContent=state.source; $("#fileMeta").textContent=`${all.length} unidades analisadas · referência ${state.reference}`;
+      fillSelect($("#collectionFilter"),all.map(s=>s.collection),"Todas as formas de coleta");
+      fillSelect($("#operationFilter"),all.map(s=>s.operation),"Todas as situações");
+      fillSelect($("#locationFilter"),all.map(s=>s.location),"Todas as localizações");
+      document.querySelectorAll("button:disabled,input:disabled,select:disabled").forEach(el=>el.disabled=false);
+      $("#emptyState").hidden=true; $("#dataTable").hidden=false; applyFilters();
+    }
+    function applyFilters(){
+      const q=norm($("#search").value), c=$("#collectionFilter").value, o=$("#operationFilter").value, l=$("#locationFilter").value;
+      state.filtered=state.schools.filter(s=>{
+        const hay=norm([s.name,s.code,s.phone,s.email,s.municipality].join(" "));
+        return (!q||hay.includes(q)) && (!c||s.collection===c) && (!o||s.operation===o) && (!l||s.location===l);
+      });
+      renderTable();
+    }
+    function renderTable(){
+      const tbody=$("#dataTable tbody");
+      tbody.innerHTML=state.filtered.map((s,i)=>{
+        const ct=collectionType(s.collection);
+        const collectionBadge=badge(s.collection,ct==="not"?"red":ct==="migration"?"amber":ct==="online"?"green":"blue");
+        const opBadge=badge(s.operation,norm(s.operation).includes("paralisada")?"gray":"green");
+        return `<tr>
+          <td><div class="school-name">${escapeHtml(s.name)}</div><span class="school-code">Código INEP ${escapeHtml(s.code)}</span></td>
+          <td>${opBadge}</td><td>${collectionBadge}</td>
+          <td>${badge(s.manager,norm(s.manager)==="sim"?"green":"red")}</td>
+          <td><strong>${s.total.toLocaleString("pt-BR")}</strong><span class="school-code">Curricular + AEE + complementar</span></td>
+          <td>${escapeHtml(s.phone)}<span class="school-code">${escapeHtml(s.email)}</span></td>
+          <td>${badge(s.priority.label,s.priority.type)}</td>
+          <td><button class="icon-btn" title="Abrir relatório" onclick="openSchool('${escapeHtml(s.code)}')">→</button></td>
+        </tr>`;
+      }).join("");
+      $("#resultCount").textContent=`Exibindo ${state.filtered.length} de ${state.schools.length} unidades`;
+      if(!state.filtered.length){ $("#dataTable").hidden=true; $("#emptyState").hidden=false; $("#emptyState").innerHTML='<div class="big">⌕</div><strong>Nenhum resultado encontrado</strong>Revise os filtros aplicados.'; }
+      else { $("#dataTable").hidden=false; $("#emptyState").hidden=true; }
+    }
+    function detail(label,value){ return `<div class="detail"><label>${label}</label><span>${escapeHtml(value)}</span></div>`; }
+    window.openSchool=function(code){
+      const s=state.schools.find(x=>x.code===code); if(!s)return; state.selected=s;
+      $("#modalName").textContent=s.name; $("#modalCode").textContent=`Código INEP ${s.code} · ${s.municipality}`;
+      const alertClass=s.priority.type==="red"?"b-red":s.priority.type==="amber"?"b-amber":s.priority.type==="gray"?"b-gray":"b-green";
+      const modalities=s.modalities.length?s.modalities.map(m=>detail(m.name,m.value.toLocaleString("pt-BR"))).join(""):'<div class="detail"><span>Nenhuma matrícula por etapa informada.</span></div>';
+      $("#modalBody").innerHTML=`
+        <div class="status-banner ${alertClass}">${escapeHtml(recommendation(s))}</div>
+        <div class="detail-grid">${detail("Forma de coleta",s.collection)}${detail("Situação de funcionamento",s.operation)}${detail("Gestor escolar",s.manager)}${detail("Escola bloqueada",s.blocked)}${detail("Telefone",s.phone)}${detail("E-mail",s.email)}${detail("Localização",s.location)}${detail("Regulamentação",s.regulation)}</div>
+        <h4 class="modal-title">Resumo de matrículas</h4>
+        <div class="enrollment"><div class="enroll"><strong>${s.curricular}</strong><small>CURRICULARES</small></div><div class="enroll"><strong>${s.aee}</strong><small>AEE</small></div><div class="enroll"><strong>${s.complementary}</strong><small>ATIV. COMPLEMENTAR</small></div><div class="enroll"><strong>${s.toConfirm}</strong><small>A CONFIRMAR</small></div></div>
+        <h4 class="modal-title">Matrículas por etapa/modalidade</h4><div class="detail-grid">${modalities}</div>
+        <div class="modal-actions"><button class="btn btn-primary" onclick="downloadSchoolPdf()">Baixar PDF da escola</button><button class="btn btn-soft" onclick="sendWhatsApp()">Enviar via WhatsApp</button><button class="btn btn-white" onclick="sendEmail()">Enviar por e-mail</button></div>`;
+      $("#modal").classList.add("open");
+    };
+    function recommendation(s){
+      if(norm(s.operation).includes("paralisada")) return "Unidade com funcionamento paralisado. Manter em lista separada e verificar a regularidade cadastral.";
+      if(collectionType(s.collection)==="not") return "Ação prioritária: a escola está em atividade e ainda não iniciou a coleta do Censo Escolar 2026.";
+      if(collectionType(s.collection)==="migration") return "Coleta iniciada por migração. Acompanhar o processamento e validar os dados após a conclusão.";
+      if(collectionType(s.collection)==="online") return "Coleta iniciada on-line. Conferir pendências, matrículas e fechamento antes do prazo final.";
+      return "Acompanhar a situação informada e validar o cadastro da unidade.";
+    }
+    function addHeader(doc,title,subtitle){
+      doc.setFillColor(7,26,54); doc.rect(0,0,210,34,"F");
+      doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(15); doc.text(title,15,15);
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(205,220,245); doc.text(subtitle,15,23);
+      doc.setTextColor(24,35,53);
+    }
+    function addFooter(doc,page,total){
+      doc.setDrawColor(220,227,237); doc.line(15,284,195,284); doc.setFontSize(7.5); doc.setTextColor(110,123,141);
+      doc.text("21ª Gerência Regional de Educação · Acompanhamento Educacenso 2026",15,290);
+      doc.text(`Página ${page} de ${total}`,195,290,{align:"right"});
+    }
+    function addCompleteTable(doc,s){
+      doc.addPage();
+      addHeader(doc,"DADOS COMPLETOS DA UNIDADE","Todos os campos constantes no relatório original do Educacenso");
+      let y=44;
+      const drawSectionTitle=title=>{
+        doc.setFillColor(232,241,255);doc.roundedRect(15,y,180,9,2,2,"F");
+        doc.setFont("helvetica","bold");doc.setFontSize(8);doc.setTextColor(16,59,120);doc.text(title,19,y+6);y+=13;
+      };
+      const newDetailPage=()=>{
+        doc.addPage();addHeader(doc,"DADOS COMPLETOS DA UNIDADE","Continuação · "+s.name);y=44;
+      };
+      drawSectionTitle("INFORMAÇÕES CADASTRAIS, COLETA E MATRÍCULAS");
+      s.allFields.forEach((item,index)=>{
+        const labelLines=lines(doc,item.label,70);
+        const valueLines=lines(doc,item.value,96);
+        const rowLines=Math.max(labelLines.length,valueLines.length);
+        const rowHeight=Math.max(9,rowLines*4+5);
+        if(y+rowHeight>279){newDetailPage();}
+        if(index%2===0){doc.setFillColor(247,249,252);doc.rect(15,y,180,rowHeight,"F");}
+        doc.setDrawColor(224,230,239);doc.line(15,y+rowHeight,195,y+rowHeight);
+        doc.setFont("helvetica","bold");doc.setFontSize(6.8);doc.setTextColor(83,98,120);doc.text(labelLines,18,y+5);
+        doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.setTextColor(24,35,53);doc.text(valueLines,91,y+5);
+        y+=rowHeight;
+      });
+      doc.setFont("helvetica","italic");doc.setFontSize(7);doc.setTextColor(104,117,138);
+      if(y+12>279)newDetailPage();
+      doc.text("Os campos sem preenchimento no arquivo original são apresentados como “Não informado”.",15,y+7);
+    }
+    function lines(doc,text,width){ return doc.splitTextToSize(String(text??""),width); }
+    function schoolPdfDoc(s){
+      const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:"mm",format:"a4"});
+      addHeader(doc,"RELATÓRIO INDIVIDUAL DE ACOMPANHAMENTO","Censo Escolar 2026 · 1ª etapa da coleta · Referência "+s.reference);
+      let y=46; doc.setFont("helvetica","bold"); doc.setFontSize(14); doc.setTextColor(10,40,86); doc.text(lines(doc,s.name,175),15,y); y+=lines(doc,s.name,175).length*6+3;
+      doc.setFontSize(8.5); doc.setTextColor(104,117,138); doc.text(`Código INEP: ${s.code}   |   Município: ${s.municipality}`,15,y); y+=10;
+      const rec=lines(doc,recommendation(s),170); const recH=Math.max(18,rec.length*5+8);
+      const isUrgent=collectionType(s.collection)==="not"&&norm(s.operation).includes("atividade");
+      doc.setFillColor(...(isUrgent?[255,234,236]:[232,241,255])); doc.roundedRect(15,y,180,recH,3,3,"F");
+      doc.setTextColor(...(isUrgent?[168,43,55]:[16,59,120])); doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.text(rec,20,y+7); y+=recH+8;
+      const info=[["Situação",s.operation],["Forma de coleta",s.collection],["Gestor escolar",s.manager],["Escola bloqueada",s.blocked],["Telefone",s.phone],["E-mail",s.email],["Localização",s.location],["Regulamentação",s.regulation]];
+      info.forEach((it,i)=>{ const col=i%2,row=Math.floor(i/2),x=15+col*92,yy=y+row*17; doc.setFillColor(246,248,251);doc.roundedRect(x,yy,88,13,2,2,"F");doc.setFontSize(6.5);doc.setTextColor(104,117,138);doc.setFont("helvetica","bold");doc.text(it[0].toUpperCase(),x+4,yy+4);doc.setFontSize(8);doc.setTextColor(24,35,53);doc.text(lines(doc,it[1],78)[0],x+4,yy+9); }); y+=75;
+      doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(10,40,86);doc.text("RESUMO DE MATRÍCULAS",15,y);y+=6;
+      const mats=[["Curriculares",s.curricular],["AEE",s.aee],["Ativ. complementar",s.complementary],["A confirmar",s.toConfirm]];
+      mats.forEach((m,i)=>{const x=15+i*45;doc.setFillColor(240,244,249);doc.roundedRect(x,y,41,18,2,2,"F");doc.setFontSize(12);doc.setTextColor(10,40,86);doc.text(String(m[1]),x+20.5,y+8,{align:"center"});doc.setFontSize(6.3);doc.setTextColor(104,117,138);doc.text(m[0].toUpperCase(),x+20.5,y+14,{align:"center"});});y+=27;
+      doc.setFontSize(10);doc.setTextColor(10,40,86);doc.text("MATRÍCULAS POR ETAPA / MODALIDADE",15,y);y+=7;doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(24,35,53);
+      if(s.modalities.length){s.modalities.forEach(m=>{const ls=lines(doc,m.name,145);doc.text("• "+ls[0],17,y);doc.setFont("helvetica","bold");doc.text(String(m.value),190,y,{align:"right"});doc.setFont("helvetica","normal");y+=6;});}else{doc.text("Nenhuma matrícula por etapa/modalidade informada.",17,y);y+=6;}
+      y=Math.max(y+7,255);doc.setFontSize(7.5);doc.setTextColor(104,117,138);doc.text("Providência/retorno da escola:",15,y);doc.setDrawColor(190,201,216);doc.line(15,y+8,195,y+8);doc.line(15,y+17,195,y+17);
+      addCompleteTable(doc,s);
+      const totalPages=doc.getNumberOfPages();
+      for(let page=1;page<=totalPages;page++){doc.setPage(page);addFooter(doc,page,totalPages);}
+      return doc;
+    }
+    window.downloadSchoolPdf=function(){ if(!state.selected)return; const doc=schoolPdfDoc(state.selected); doc.save(`Educacenso_${state.selected.code}_${slug(state.selected.name)}.pdf`); };
+    function generalPdf(){
+      const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"});
+      const all=state.schools,active=all.filter(s=>norm(s.operation).includes("atividade"));
+      const urgent=active.filter(s=>collectionType(s.collection)==="not");
+      const migration=all.filter(s=>collectionType(s.collection)==="migration"),online=all.filter(s=>collectionType(s.collection)==="online"),paused=all.filter(s=>norm(s.operation).includes("paralisada"));
+      addHeader(doc,"RELATÓRIO GERENCIAL · EDUCACENSO 2026","21ª GRE · Acompanhamento da 1ª etapa · Referência "+state.reference);
+      let y=47;doc.setFontSize(10);doc.setFont("helvetica","bold");doc.setTextColor(10,40,86);doc.text("VISÃO GERAL",15,y);y+=7;
+      const cards=[["Unidades",all.length,[21,85,163]],["Não iniciaram",urgent.length,[196,59,72]],["Migração",migration.length,[169,104,0]],["On-line",online.length,[21,128,93]],["Paralisadas",paused.length,[104,115,132]]];
+      cards.forEach((c,i)=>{const x=15+i*36;doc.setFillColor(246,248,251);doc.roundedRect(x,y,33,22,2,2,"F");doc.setTextColor(...c[2]);doc.setFontSize(14);doc.text(String(c[1]),x+16.5,y+9,{align:"center"});doc.setFontSize(6);doc.text(c[0].toUpperCase(),x+16.5,y+16,{align:"center"});});y+=33;
+      const sections=[["AÇÃO IMEDIATA · ESCOLAS ATIVAS QUE NÃO INICIARAM",urgent,[196,59,72]],["COLETA EM MIGRAÇÃO",migration,[169,104,0]],["COLETA ON-LINE",online,[21,128,93]],["UNIDADES PARALISADAS",paused,[104,115,132]]];
+      const pageRows=[];
+      sections.forEach(sec=>{pageRows.push({head:true,text:sec[0],color:sec[2]});sec[1].forEach(s=>pageRows.push({school:s}));});
+      for(const item of pageRows){
+        if(y>271){addFooter(doc,doc.getNumberOfPages(),0);doc.addPage();addHeader(doc,"RELATÓRIO GERENCIAL · EDUCACENSO 2026","Continuação");y=44;}
+        if(item.head){doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(...item.color);doc.text(item.text,15,y);y+=7;}
+        else {const s=item.school;doc.setFillColor(248,250,252);doc.roundedRect(15,y-3,180,11,1.5,1.5,"F");doc.setTextColor(24,35,53);doc.setFont("helvetica","bold");doc.setFontSize(7.6);doc.text(lines(doc,s.name,118)[0],18,y+2);doc.setFont("helvetica","normal");doc.setTextColor(104,117,138);doc.text(s.code,140,y+2);doc.text(s.phone,192,y+2,{align:"right"});y+=14;}
+      }
+      const total=doc.getNumberOfPages();for(let p=1;p<=total;p++){doc.setPage(p);addFooter(doc,p,total);}
+      doc.save(`Relatorio_Geral_Educacenso_21GRE_${slug(state.reference)}.pdf`);
+    }
+    async function allPdfs(){
+      if(!state.schools.length)return; const btn=$("#allPdf"),old=btn.textContent;btn.disabled=true;btn.textContent="Preparando arquivos...";
+      try{const zip=new JSZip();for(let i=0;i<state.schools.length;i++){const s=state.schools[i];btn.textContent=`Gerando ${i+1}/${state.schools.length}`;const doc=schoolPdfDoc(s);zip.file(`${s.code}_${slug(s.name)}.pdf`,doc.output("arraybuffer"));await new Promise(r=>setTimeout(r,0));}const blob=await zip.generateAsync({type:"blob"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`Relatorios_por_escola_Educacenso_21GRE.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast("Relatórios individuais gerados com sucesso.");}
+      catch(e){alert("Não foi possível gerar o pacote: "+e.message);}finally{btn.disabled=false;btn.textContent=old;}
+    }
+    window.sendWhatsApp=function(){const s=state.selected;if(!s)return;const msg=`Prezada equipe gestora do(a) ${s.name}, encaminhamos o relatório de acompanhamento do Educacenso 2026. Situação atual: ${s.collection}. ${recommendation(s)}`;window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank");};
+    window.sendEmail=function(){const s=state.selected;if(!s)return;const subject=`Acompanhamento Educacenso 2026 - ${s.name}`;const body=`Prezada equipe gestora,\\n\\nEncaminhamos o relatório individual de acompanhamento do Educacenso 2026.\\n\\nSituação atual: ${s.collection}.\\n${recommendation(s)}\\n\\nAtenciosamente,\\n21ª GRE`;window.location.href=`mailto:${encodeURIComponent(s.email.includes("@")?s.email:"")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;};
+    $("#fileInput").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;$("#fileName").textContent="Analisando "+file.name+"...";try{parseWorkbook(await file.arrayBuffer(),file.name);toast("Planilha analisada com sucesso.");}catch(err){console.error(err);alert("Não foi possível analisar a planilha. "+err.message);$("#fileName").textContent="Importe o Relatório de Acompanhamento da Coleta";}});
+    ["search","collectionFilter","operationFilter","locationFilter"].forEach(id=>$("#"+id).addEventListener(id==="search"?"input":"change",applyFilters));
+    $("#clearFilters").addEventListener("click",()=>{$("#search").value="";$("#collectionFilter").value="";$("#operationFilter").value="";$("#locationFilter").value="";applyFilters();});
+    $("#closeModal").addEventListener("click",()=>$("#modal").classList.remove("open"));
+    $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))$("#modal").classList.remove("open");});
+    $("#generalPdf").addEventListener("click",generalPdf);$("#allPdf").addEventListener("click",allPdfs);
+  </script>
+</body>
+</html>
