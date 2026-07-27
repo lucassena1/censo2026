@@ -184,6 +184,18 @@
     .school-name{font-size:11px}.school-code{font-size:9px}
     .badge{border-radius:2px;padding:4px 7px;font-size:9px;border-left:3px solid currentColor}
     .icon-btn{width:31px;height:29px;border-radius:1px;border-color:#9eacb7;background:#fff}
+    .track-cell{text-align:center;white-space:nowrap}
+    .track-check{
+      appearance:none;width:19px;height:19px;margin:0;border:1px solid #8d9ba5;background:#fff;
+      vertical-align:middle;cursor:pointer;position:relative;border-radius:1px;
+    }
+    .track-check:checked{background:var(--blue-950);border-color:var(--blue-950)}
+    .track-check:checked:after{
+      content:"✓";position:absolute;inset:0;color:#fff;font-size:13px;font-weight:800;
+      display:grid;place-items:center;line-height:1;
+    }
+    .track-check:focus{outline:2px solid #f1c232;outline-offset:2px}
+    .track-label{display:block;font-size:8px;color:#68747f;margin-top:3px;text-transform:uppercase;letter-spacing:.35px}
     .empty{background:#f8f9fa}
     .footer{padding:19px;border-top:1px solid #c6cfd5;margin-top:15px;text-transform:uppercase;letter-spacing:.55px;font-size:9px}
     .modal{background:rgba(5,23,42,.72);backdrop-filter:none}
@@ -257,7 +269,7 @@
       <div class="table-wrap">
         <div class="empty" id="emptyState"><div class="big">▤</div><strong>Nenhuma planilha carregada</strong>Selecione o relatório do Educacenso acima.</div>
         <table id="dataTable" hidden>
-          <thead><tr><th>Escola</th><th>Situação</th><th>Forma de coleta</th><th>Gestor</th><th>Matrículas</th><th>Contato</th><th>Prioridade</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Escola</th><th>Situação</th><th>Forma de coleta</th><th>Gestor</th><th>Matrículas</th><th>Contato</th><th>Avisada</th><th>Retorno</th><th>Prioridade</th><th>Ações</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -276,11 +288,35 @@
   <script>
     const $ = s => document.querySelector(s);
     const state = { schools:[], filtered:[], selected:null, reference:"", source:"" };
+    const TRACKING_KEY="educacenso_21gre_acompanhamento_v1";
+    const ROOT_REPORTS=[
+      "Relatorio_Acomp_Coleta_1Etapa_27072026.xlsx",
+      "Relatorio_Acomp_Coleta_1Etapa_27072026.xls",
+      "Relatorio_Acomp_Coleta_1Etapa_27072026"
+    ];
     const norm = v => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
     const num = v => Number(String(v ?? 0).replace(",", ".")) || 0;
     const clean = v => (v === undefined || v === null || String(v).trim()==="" ? "Não informado" : String(v).trim());
     const slug = v => norm(v).replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,80);
     const toast = msg => { const t=$("#toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2800); };
+    function loadTracking(){
+      try{return JSON.parse(localStorage.getItem(TRACKING_KEY)||"{}")||{};}catch(e){return {};}
+    }
+    function saveTracking(data){
+      try{localStorage.setItem(TRACKING_KEY,JSON.stringify(data));return true;}catch(e){return false;}
+    }
+    function trackingFor(code){
+      const item=loadTracking()[String(code)]||{};
+      return {notified:!!item.notified,returned:!!item.returned};
+    }
+    window.setTracking=function(code,field,value){
+      const data=loadTracking(),key=String(code);
+      data[key]={...(data[key]||{}),[field]:!!value,updatedAt:new Date().toISOString()};
+      if(!saveTracking(data)){alert("O navegador não permitiu salvar o marcador.");return;}
+      const s=state.schools.find(x=>x.code===key);
+      if(s)s.tracking=trackingFor(key);
+      toast(field==="notified"?(value?"Escola marcada como avisada.":"Aviso desmarcado."):(value?"Retorno registrado.":"Retorno desmarcado."));
+    };
     function get(row, map, names){
       for(const name of names){ const idx=map[norm(name)]; if(idx!==undefined) return row[idx]; }
       return "";
@@ -342,6 +378,7 @@
         };
         s.total=s.curricular+s.aee+s.complementary;
         s.priority=priority(s);
+        s.tracking=trackingFor(s.code);
         schools.push(s);
       }
       if(!schools.length) throw new Error("Nenhuma escola foi localizada no arquivo.");
@@ -392,6 +429,8 @@
           <td>${badge(s.manager,norm(s.manager)==="sim"?"green":"red")}</td>
           <td><strong>${s.total.toLocaleString("pt-BR")}</strong><span class="school-code">Curricular + AEE + complementar</span></td>
           <td>${escapeHtml(s.phone)}<span class="school-code">${escapeHtml(s.email)}</span></td>
+          <td class="track-cell"><input class="track-check" type="checkbox" aria-label="Escola avisada" ${s.tracking.notified?"checked":""} onchange="setTracking('${escapeHtml(s.code)}','notified',this.checked)"><span class="track-label">Avisada</span></td>
+          <td class="track-cell"><input class="track-check" type="checkbox" aria-label="Retorno recebido" ${s.tracking.returned?"checked":""} onchange="setTracking('${escapeHtml(s.code)}','returned',this.checked)"><span class="track-label">Recebido</span></td>
           <td>${badge(s.priority.label,s.priority.type)}</td>
           <td><button class="icon-btn" title="Abrir relatório" onclick="openSchool('${escapeHtml(s.code)}')">→</button></td>
         </tr>`;
@@ -408,7 +447,7 @@
       const modalities=s.modalities.length?s.modalities.map(m=>detail(m.name,m.value.toLocaleString("pt-BR"))).join(""):'<div class="detail"><span>Nenhuma matrícula por etapa informada.</span></div>';
       $("#modalBody").innerHTML=`
         <div class="status-banner ${alertClass}">${escapeHtml(recommendation(s))}</div>
-        <div class="detail-grid">${detail("Forma de coleta",s.collection)}${detail("Situação de funcionamento",s.operation)}${detail("Gestor escolar",s.manager)}${detail("Escola bloqueada",s.blocked)}${detail("Telefone",s.phone)}${detail("E-mail",s.email)}${detail("Localização",s.location)}${detail("Regulamentação",s.regulation)}</div>
+        <div class="detail-grid">${detail("Forma de coleta",s.collection)}${detail("Situação de funcionamento",s.operation)}${detail("Gestor escolar",s.manager)}${detail("Escola bloqueada",s.blocked)}${detail("Telefone",s.phone)}${detail("E-mail",s.email)}${detail("Escola avisada",s.tracking.notified?"Sim":"Não")}${detail("Retorno recebido",s.tracking.returned?"Sim":"Não")}${detail("Localização",s.location)}${detail("Regulamentação",s.regulation)}</div>
         <h4 class="modal-title">Resumo de matrículas</h4>
         <div class="enrollment"><div class="enroll"><strong>${s.curricular}</strong><small>CURRICULARES</small></div><div class="enroll"><strong>${s.aee}</strong><small>AEE</small></div><div class="enroll"><strong>${s.complementary}</strong><small>ATIV. COMPLEMENTAR</small></div><div class="enroll"><strong>${s.toConfirm}</strong><small>A CONFIRMAR</small></div></div>
         <h4 class="modal-title">Matrículas por etapa/modalidade</h4><div class="detail-grid">${modalities}</div>
@@ -445,7 +484,12 @@
         doc.addPage();addHeader(doc,"DADOS COMPLETOS DA UNIDADE","Continuação · "+s.name);y=44;
       };
       drawSectionTitle("INFORMAÇÕES CADASTRAIS, COLETA E MATRÍCULAS");
-      s.allFields.forEach((item,index)=>{
+      const completeFields=[
+        {label:"Controle 21ª GRE - Escola avisada",value:s.tracking.notified?"Sim":"Não"},
+        {label:"Controle 21ª GRE - Retorno recebido",value:s.tracking.returned?"Sim":"Não"},
+        ...s.allFields
+      ];
+      completeFields.forEach((item,index)=>{
         const labelLines=lines(doc,item.label,70);
         const valueLines=lines(doc,item.value,96);
         const rowLines=Math.max(labelLines.length,valueLines.length);
@@ -500,7 +544,7 @@
       for(const item of pageRows){
         if(y>271){addFooter(doc,doc.getNumberOfPages(),0);doc.addPage();addHeader(doc,"RELATÓRIO GERENCIAL · EDUCACENSO 2026","Continuação");y=44;}
         if(item.head){doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(...item.color);doc.text(item.text,15,y);y+=7;}
-        else {const s=item.school;doc.setFillColor(248,250,252);doc.roundedRect(15,y-3,180,11,1.5,1.5,"F");doc.setTextColor(24,35,53);doc.setFont("helvetica","bold");doc.setFontSize(7.6);doc.text(lines(doc,s.name,118)[0],18,y+2);doc.setFont("helvetica","normal");doc.setTextColor(104,117,138);doc.text(s.code,140,y+2);doc.text(s.phone,192,y+2,{align:"right"});y+=14;}
+        else {const s=item.school;doc.setFillColor(248,250,252);doc.roundedRect(15,y-3,180,11,1.5,1.5,"F");doc.setTextColor(24,35,53);doc.setFont("helvetica","bold");doc.setFontSize(7.6);doc.text(lines(doc,s.name,104)[0],18,y+2);doc.setFont("helvetica","normal");doc.setTextColor(104,117,138);doc.text(s.code,126,y+2);doc.text(`A:${s.tracking.notified?"Sim":"Não"}  R:${s.tracking.returned?"Sim":"Não"}`,145,y+2);doc.text(s.phone,192,y+2,{align:"right"});y+=14;}
       }
       const total=doc.getNumberOfPages();for(let p=1;p<=total;p++){doc.setPage(p);addFooter(doc,p,total);}
       doc.save(`Relatorio_Geral_Educacenso_21GRE_${slug(state.reference)}.pdf`);
@@ -518,6 +562,19 @@
     $("#closeModal").addEventListener("click",()=>$("#modal").classList.remove("open"));
     $("#modal").addEventListener("click",e=>{if(e.target===$("#modal"))$("#modal").classList.remove("open");});
     $("#generalPdf").addEventListener("click",generalPdf);$("#allPdf").addEventListener("click",allPdfs);
+    async function autoLoadRootReport(){
+      if(location.protocol==="file:")return;
+      for(const fileName of ROOT_REPORTS){
+        try{
+          const response=await fetch(fileName,{cache:"no-store"});
+          if(!response.ok)continue;
+          parseWorkbook(await response.arrayBuffer(),fileName);
+          toast("Relatório da raiz carregado automaticamente.");
+          return;
+        }catch(e){}
+      }
+    }
+    autoLoadRootReport();
   </script>
 </body>
 </html>
